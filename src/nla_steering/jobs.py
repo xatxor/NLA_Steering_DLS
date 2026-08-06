@@ -77,6 +77,23 @@ def log_path(job_id: str) -> Path:
     return jobs_dir("logs") / f"{job_id}.log"
 
 
+def read_log(job_id: str, timeout: float = 90.0, poll: float = 3.0) -> str:
+    """Прочитать лог, дождавшись его появления.
+
+    Google Drive синхронизирует файлы независимо друг от друга, поэтому статус
+    задачи регулярно доезжает раньше лога: `wait()` уже вернул 'done', а файла
+    лога локально ещё нет. Ждём его отдельно, иначе на каждой задаче ловим
+    FileNotFoundError на ровном месте.
+    """
+    path = log_path(job_id)
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if path.exists():
+            return path.read_text("utf-8")
+        time.sleep(poll)
+    raise TimeoutError(f"лог {job_id} не появился за {timeout} с (задержка Drive?)")
+
+
 def status() -> dict[str, list[str]]:
     """Снимок очереди — чтобы проверить, что происходит."""
     ensure_layout()

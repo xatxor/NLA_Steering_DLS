@@ -45,10 +45,12 @@ nla:
 layer: 24
 
 runtime:
-  # T4 — Turing (7.5), bf16 не поддерживается, flash-attn 2 требует Ampere
+  # T4 — Turing (7.5): bf16 доступен только эмуляцией, без тензорных ядер,
+  # поэтому fp16. flash-attn 2 требует Ampere, остаётся sdpa.
   dtype: float16
   attn_implementation: sdpa
-  # база и NLA вместе ~12.4 ГБ из 15 — грузим по очереди, не одновременно
+  # замерено: 14.56 ГБ. База и NLA вместе ~12.4 ГБ — на KV-кэш почти ничего
+  # не остаётся, поэтому грузим по очереди, а не одновременно.
   two_phase: true
 
 concept: refusal
