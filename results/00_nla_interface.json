@@ -1,0 +1,339 @@
+{
+  "reports": [
+    {
+      "repo": "Qwen/Qwen2.5-3B-Instruct",
+      "role": null,
+      "trained_on": null,
+      "extraction_layer_index": null,
+      "d_model": null,
+      "injection": null,
+      "mse_scale": null,
+      "injection_scale": null,
+      "prompt_templates": null,
+      "base_checkpoint": null,
+      "architectures": [
+        "Qwen2ForCausalLM"
+      ],
+      "model_type": "qwen2",
+      "hidden_size": 2048,
+      "num_hidden_layers": 36,
+      "vocab_size": 151936,
+      "torch_dtype": "bfloat16",
+      "extra_config_keys": [],
+      "auto_map": null,
+      "added_tokens": {
+        "151643": "<|endoftext|>",
+        "151644": "<|im_start|>",
+        "151645": "<|im_end|>",
+        "151646": "<|object_ref_start|>",
+        "151647": "<|object_ref_end|>",
+        "151648": "<|box_start|>",
+        "151649": "<|box_end|>",
+        "151650": "<|quad_start|>",
+        "151651": "<|quad_end|>",
+        "151652": "<|vision_start|>",
+        "151653": "<|vision_end|>",
+        "151654": "<|vision_pad|>",
+        "151655": "<|image_pad|>",
+        "151656": "<|video_pad|>",
+        "151657": "<tool_call>",
+        "151658": "</tool_call>",
+        "151659": "<|fim_prefix|>",
+        "151660": "<|fim_middle|>",
+        "151661": "<|fim_suffix|>",
+        "151662": "<|fim_pad|>",
+        "151663": "<|repo_name|>",
+        "151664": "<|file_sep|>"
+      },
+      "has_chat_template": true,
+      "chat_template_head": "{%- if tools %}\n    {{- '<|im_start|>system\\n' }}\n    {%- if messages[0]['role'] == 'system' %}\n        {{- messages[0]['content'] }}\n    {%- else %}\n        {{- 'You are Qwen, created by Alibaba Cloud. You are a helpful assistant.' }}\n    {%- endif %}\n    {{- \"\\n\\n# Tools\\n\\nYou may call one or more functions to assist with the user query.\\n\\nYou are provided with function signatures within <tool",
+      "custom_code": [],
+      "non_weight_files": [
+        ".gitattributes",
+        "LICENSE",
+        "README.md",
+        "config.json",
+        "generation_config.json",
+        "merges.txt",
+        "model.safetensors.index.json",
+        "tokenizer.json",
+        "tokenizer_config.json",
+        "vocab.json"
+      ]
+    },
+    {
+      "repo": "therem/nla-qwen2.5-3b-L24-sft-av",
+      "role": "av",
+      "trained_on": [
+        "nla_qwen3b_onpolicy_50k (SFT baseline)"
+      ],
+      "extraction_layer_index": 24,
+      "d_model": 2048,
+      "injection": {
+        "injection_char": "㈎",
+        "injection_token_id": 149705,
+        "injection_left_neighbor_id": 29,
+        "injection_right_neighbor_id": 522,
+        "critic_suffix_ids": null
+      },
+      "mse_scale": 45.254833995939045,
+      "injection_scale": null,
+      "prompt_templates": {
+        "av": "You are a meticulous AI researcher conducting an important investigation into activation vectors from a language model. Your overall task is to describe the semantic content of that activation vector.\n\nWe will pass the vector enclosed in <concept> tags into your context. You must then produce an explanation for the vector, enclosed within <explanation> tags. The explanation consists of 2-3 text snippets describing that vector.\n\nHere is the vector:\n\n<concept>{injection_char}</concept>\n\nPlease provide an explanation.",
+        "ar": "Summary of the following text: <text>{explanation}</text> <summary>"
+      },
+      "base_checkpoint": "Qwen/Qwen2.5-3B-Instruct",
+      "architectures": [
+        "Qwen2ForCausalLM"
+      ],
+      "model_type": "qwen2",
+      "hidden_size": 2048,
+      "num_hidden_layers": 36,
+      "vocab_size": 151936,
+      "torch_dtype": null,
+      "extra_config_keys": [],
+      "auto_map": null,
+      "added_tokens": {},
+      "has_chat_template": false,
+      "chat_template_head": "",
+      "custom_code": [],
+      "non_weight_files": [
+        ".gitattributes",
+        "chat_template.jinja",
+        "config.json",
+        "generation_config.json",
+        "nla_meta.yaml",
+        "tokenizer.json",
+        "tokenizer_config.json"
+      ]
+    },
+    {
+      "repo": "therem/nla-qwen2.5-3b-L24-sft-ar",
+      "role": "ar",
+      "trained_on": [
+        "nla_qwen3b_onpolicy_50k (SFT baseline)"
+      ],
+      "extraction_layer_index": 24,
+      "d_model": 2048,
+      "injection": {
+        "injection_char": "㈎",
+        "injection_token_id": 149705,
+        "injection_left_neighbor_id": 29,
+        "injection_right_neighbor_id": 522,
+        "critic_suffix_ids": [
+          1318,
+          29,
+          366,
+          1708,
+          29
+        ]
+      },
+      "mse_scale": 45.254833995939045,
+      "injection_scale": null,
+      "prompt_templates": {
+        "av": "You are a meticulous AI researcher conducting an important investigation into activation vectors from a language model. Your overall task is to describe the semantic content of that activation vector.\n\nWe will pass the vector enclosed in <concept> tags into your context. You must then produce an explanation for the vector, enclosed within <explanation> tags. The explanation consists of 2-3 text snippets describing that vector.\n\nHere is the vector:\n\n<concept>{injection_char}</concept>\n\nPlease provide an explanation.",
+        "ar": "Summary of the following text: <text>{explanation}</text> <summary>"
+      },
+      "base_checkpoint": "Qwen/Qwen2.5-3B-Instruct",
+      "architectures": [
+        "Qwen2ForCausalLM"
+      ],
+      "model_type": "qwen2",
+      "hidden_size": 2048,
+      "num_hidden_layers": 25,
+      "vocab_size": 151936,
+      "torch_dtype": null,
+      "extra_config_keys": [],
+      "auto_map": null,
+      "added_tokens": {},
+      "has_chat_template": false,
+      "chat_template_head": "",
+      "custom_code": [],
+      "non_weight_files": [
+        ".gitattributes",
+        "chat_template.jinja",
+        "config.json",
+        "generation_config.json",
+        "nla_meta.yaml",
+        "tokenizer.json",
+        "tokenizer_config.json"
+      ]
+    },
+    {
+      "repo": "therem/nla-qwen2.5-3b-L24-rl-v13-av",
+      "role": "av",
+      "trained_on": [
+        "nla_qwen3b_fineweb_50k (RL v13, co-trained, iter 300)"
+      ],
+      "extraction_layer_index": 24,
+      "d_model": 2048,
+      "injection": {
+        "injection_char": "㈎",
+        "injection_token_id": 149705,
+        "injection_left_neighbor_id": 29,
+        "injection_right_neighbor_id": 522,
+        "critic_suffix_ids": null
+      },
+      "mse_scale": 45.254833995939045,
+      "injection_scale": null,
+      "prompt_templates": {
+        "av": "You are a meticulous AI researcher conducting an important investigation into activation vectors from a language model. Your overall task is to describe the semantic content of that activation vector.\n\nWe will pass the vector enclosed in <concept> tags into your context. You must then produce an explanation for the vector, enclosed within <explanation> tags. The explanation consists of 2-3 text snippets describing that vector.\n\nHere is the vector:\n\n<concept>{injection_char}</concept>\n\nPlease provide an explanation.",
+        "ar": "Summary of the following text: <text>{explanation}</text> <summary>"
+      },
+      "base_checkpoint": "Qwen/Qwen2.5-3B-Instruct",
+      "architectures": [
+        "Qwen2ForCausalLM"
+      ],
+      "model_type": "qwen2",
+      "hidden_size": 2048,
+      "num_hidden_layers": 36,
+      "vocab_size": 151936,
+      "torch_dtype": null,
+      "extra_config_keys": [],
+      "auto_map": null,
+      "added_tokens": {},
+      "has_chat_template": false,
+      "chat_template_head": "",
+      "custom_code": [],
+      "non_weight_files": [
+        ".gitattributes",
+        "chat_template.jinja",
+        "config.json",
+        "generation_config.json",
+        "nla_meta.yaml",
+        "tokenizer.json",
+        "tokenizer_config.json"
+      ]
+    },
+    {
+      "repo": "therem/nla-qwen2.5-3b-L24-rl-v13-ar",
+      "role": "ar",
+      "trained_on": [
+        "nla_qwen3b_fineweb_50k (RL v13, co-trained, iter 300)"
+      ],
+      "extraction_layer_index": 24,
+      "d_model": 2048,
+      "injection": {
+        "injection_char": "㈎",
+        "injection_token_id": 149705,
+        "injection_left_neighbor_id": 29,
+        "injection_right_neighbor_id": 522,
+        "critic_suffix_ids": [
+          1318,
+          29,
+          366,
+          1708,
+          29
+        ]
+      },
+      "mse_scale": 45.254833995939045,
+      "injection_scale": null,
+      "prompt_templates": {
+        "av": "You are a meticulous AI researcher conducting an important investigation into activation vectors from a language model. Your overall task is to describe the semantic content of that activation vector.\n\nWe will pass the vector enclosed in <concept> tags into your context. You must then produce an explanation for the vector, enclosed within <explanation> tags. The explanation consists of 2-3 text snippets describing that vector.\n\nHere is the vector:\n\n<concept>{injection_char}</concept>\n\nPlease provide an explanation.",
+        "ar": "Summary of the following text: <text>{explanation}</text> <summary>"
+      },
+      "base_checkpoint": "Qwen/Qwen2.5-3B-Instruct",
+      "architectures": [
+        "Qwen2ForCausalLM"
+      ],
+      "model_type": "qwen2",
+      "hidden_size": 2048,
+      "num_hidden_layers": 25,
+      "vocab_size": 151936,
+      "torch_dtype": null,
+      "extra_config_keys": [],
+      "auto_map": null,
+      "added_tokens": {},
+      "has_chat_template": false,
+      "chat_template_head": "",
+      "custom_code": [],
+      "non_weight_files": [
+        ".gitattributes",
+        "chat_template.jinja",
+        "config.json",
+        "generation_config.json",
+        "nla_meta.yaml",
+        "tokenizer.json",
+        "tokenizer_config.json"
+      ]
+    },
+    {
+      "repo": "therem/nla-qwen2.5-3b-L24-rl-iter5000-av",
+      "role": "av",
+      "trained_on": [
+        "nla_qwen3b_onpolicy_50k (long RL run, iter 5000)"
+      ],
+      "extraction_layer_index": 24,
+      "d_model": 2048,
+      "injection": {
+        "injection_char": "㈎",
+        "injection_token_id": 149705,
+        "injection_left_neighbor_id": 29,
+        "injection_right_neighbor_id": 522,
+        "critic_suffix_ids": null
+      },
+      "mse_scale": 45.254833995939045,
+      "injection_scale": 100.0,
+      "prompt_templates": {
+        "av": "You are a meticulous AI researcher conducting an important investigation into activation vectors from a language model. Your overall task is to describe the semantic content of that activation vector.\n\nWe will pass the vector enclosed in <concept> tags into your context. You must then produce an explanation for the vector, enclosed within <explanation> tags. The explanation consists of 2-3 text snippets describing that vector.\n\nHere is the vector:\n\n<concept>{injection_char}</concept>\n\nPlease provide an explanation.",
+        "ar": "Summary of the following text: <text>{explanation}</text> <summary>"
+      },
+      "base_checkpoint": "Qwen/Qwen2.5-3B-Instruct",
+      "architectures": [
+        "Qwen2ForCausalLM"
+      ],
+      "model_type": "qwen2",
+      "hidden_size": 2048,
+      "num_hidden_layers": 36,
+      "vocab_size": 151936,
+      "torch_dtype": null,
+      "extra_config_keys": [],
+      "auto_map": null,
+      "added_tokens": {},
+      "has_chat_template": false,
+      "chat_template_head": "",
+      "custom_code": [],
+      "non_weight_files": [
+        ".gitattributes",
+        "chat_template.jinja",
+        "config.json",
+        "generation_config.json",
+        "nla_meta.yaml",
+        "tokenizer.json",
+        "tokenizer_config.json"
+      ]
+    }
+  ],
+  "deltas": {
+    "therem/nla-qwen2.5-3b-L24-sft-av": {
+      "vocab_delta": 0,
+      "hidden_matches": true,
+      "layers_match": true,
+      "new_tokens": []
+    },
+    "therem/nla-qwen2.5-3b-L24-sft-ar": {
+      "vocab_delta": 0,
+      "hidden_matches": true,
+      "layers_match": false,
+      "new_tokens": []
+    },
+    "therem/nla-qwen2.5-3b-L24-rl-v13-av": {
+      "vocab_delta": 0,
+      "hidden_matches": true,
+      "layers_match": true,
+      "new_tokens": []
+    },
+    "therem/nla-qwen2.5-3b-L24-rl-v13-ar": {
+      "vocab_delta": 0,
+      "hidden_matches": true,
+      "layers_match": false,
+      "new_tokens": []
+    },
+    "therem/nla-qwen2.5-3b-L24-rl-iter5000-av": {
+      "vocab_delta": 0,
+      "hidden_matches": true,
+      "layers_match": true,
+      "new_tokens": []
+    }
+  }
+}

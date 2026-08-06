@@ -1,0 +1,70 @@
+# Единый источник правды по моделям и слою. Всё остальное наследуется отсюда.
+
+base_model: Qwen/Qwen2.5-3B-Instruct
+
+nla:
+  # av — энкодер: активация -> текстовое объяснение. Полная 36-слойная модель.
+  # ar — декодер: текст -> активация слоя 24. Модель ОБРЕЗАНА до 25 слоёв (0..24),
+  #      так что активация читается с выхода её последнего слоя.
+  # Берём co-trained пару из одного прогона: иначе reconstruction score
+  # смешивает качество декодера с рассогласованием пары.
+  verbalizer: therem/nla-qwen2.5-3b-L24-rl-v13-av
+  reconstructor: therem/nla-qwen2.5-3b-L24-rl-v13-ar
+  # SFT-пара как бейзлайн для сравнения "SFT vs RL"
+  verbalizer_sft: therem/nla-qwen2.5-3b-L24-sft-av
+  reconstructor_sft: therem/nla-qwen2.5-3b-L24-sft-ar
+
+  # Протокол инъекции, восстановлен из nla_meta.yaml (scripts/00_inspect_nla.py).
+  # Спец-токенов не добавляли (vocab совпадает с базой): активацию подставляют
+  # хуком вместо эмбеддинга символа U+320E, найдя его позицию в промпте.
+  injection:
+    char: "㈎"        # ㈎
+    token_id: 149705
+    left_neighbor_id: 29   # соседи по токенизации — для надёжного поиска позиции
+    right_neighbor_id: 522
+  d_model: 2048
+  # Нормировочный масштаб из метаданных. Направление применения (умножать или
+  # делить) НЕ задокументировано — проверить эмпирически по norm-matching.
+  mse_scale: 45.254833995939045
+
+  prompts:
+    av: |
+      You are a meticulous AI researcher conducting an important investigation into activation vectors from a language model. Your overall task is to describe the semantic content of that activation vector.
+
+      We will pass the vector enclosed in <concept> tags into your context. You must then produce an explanation for the vector, enclosed within <explanation> tags. The explanation consists of 2-3 text snippets describing that vector.
+
+      Here is the vector:
+
+      <concept>{injection_char}</concept>
+
+      Please provide an explanation.
+    ar: "Summary of the following text: <text>{explanation}</text> <summary>"
+
+# Слой зашит в веса NLA (L24) — steering-вектор считаем и применяем на нём же,
+# иначе гейтинг-сигнал измеряет не то, во что мы вмешиваемся.
+layer: 24
+
+runtime:
+  # T4 — Turing (7.5), bf16 не поддерживается, flash-attn 2 требует Ampere
+  dtype: float16
+  attn_implementation: sdpa
+  # база и NLA вместе ~12.4 ГБ из 15 — грузим по очереди, не одновременно
+  two_phase: true
+
+concept: refusal
+
+data:
+  harmful: [advbench, jailbreakbench]
+  over_refusal: [xstest, or-bench]
+
+steering:
+  method: difference_of_means
+  alphas: [0.0, 0.5, 1.0, 1.5, 2.0]
+
+gating:
+  # доля токенов, на которых применяется стиринг; задаётся квантилем, а не
+  # абсолютным порогом — так режимы сравниваются при равном бюджете вмешательства
+  rates: [0.05, 0.1, 0.2, 0.5, 1.0]
+  modes: [all, random, cosine, probe, nla_latent, nla_text]
+
+seed: 0

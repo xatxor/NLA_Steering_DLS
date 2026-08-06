@@ -1,0 +1,22 @@
+# секреты
+.env
+
+# окружение
+.venv/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+*.egg-info/
+uv.lock
+
+# тяжёлые артефакты — живут на Drive, не в git
+artifacts/
+*.safetensors
+*.npz
+*.npy
+*.pt
+*.bin
+
+# кэши моделей
+.cache/
+hf_cache/

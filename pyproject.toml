@@ -1,0 +1,39 @@
+[project]
+name = "nla-steering"
+version = "0.1.0"
+description = "Token-level gating of activation steering via Natural Language Autoencoders"
+requires-python = ">=3.11"
+
+# Локальные зависимости: только анализ и инспекция. Ни torch, ни весов —
+# на C: всего ~11 ГБ свободно, вся тяжёлая работа идёт на GPU-стороне.
+dependencies = [
+    "numpy>=1.26",
+    "pandas>=2.2",
+    "scikit-learn>=1.5",
+    "matplotlib>=3.9",
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0",
+    "tqdm>=4.66",
+    "safetensors>=0.4",
+    "huggingface-hub>=0.26",
+]
+
+[dependency-groups]
+# Ставится только в Colab: `uv pip install --group gpu`
+gpu = [
+    "torch>=2.4",
+    "transformers>=4.46",
+    "accelerate>=1.0",
+    "datasets>=3.0",
+    "sentence-transformers>=3.0",
+]
+
+[tool.uv]
+default-groups = []
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/nla_steering"]
