@@ -77,20 +77,33 @@ def log_path(job_id: str) -> Path:
     return jobs_dir("logs") / f"{job_id}.log"
 
 
-def read_log(job_id: str, timeout: float = 90.0, poll: float = 3.0) -> str:
-    """Прочитать лог, дождавшись его появления.
+#: воркер пишет эту метку последней строкой — по ней видно, что лог доехал целиком
+LOG_END = "=== exit "
 
-    Google Drive синхронизирует файлы независимо друг от друга, поэтому статус
-    задачи регулярно доезжает раньше лога: `wait()` уже вернул 'done', а файла
-    лога локально ещё нет. Ждём его отдельно, иначе на каждой задаче ловим
-    FileNotFoundError на ровном месте.
+
+def read_log(job_id: str, timeout: float = 120.0, poll: float = 3.0,
+             complete: bool = True) -> str:
+    """Прочитать лог, дождавшись его появления и полноты.
+
+    Google Drive синхронизирует файлы независимо друг от друга и может отдать
+    файл в том виде, в каком тот был на середине записи. На практике случалось
+    и то, что статус задачи приезжал раньше лога, и то, что лог приезжал
+    обрезанным по последней строке. Поэтому ждём не просто существования файла,
+    а финальной метки `=== exit`.
+
+    `complete=False` — прочитать что есть (следить за длинной задачей по ходу).
     """
     path = log_path(job_id)
     deadline = time.monotonic() + timeout
+    text = ""
     while time.monotonic() < deadline:
         if path.exists():
-            return path.read_text("utf-8")
+            text = path.read_text("utf-8")
+            if not complete or LOG_END in text:
+                return text
         time.sleep(poll)
+    if text:
+        return text  # лучше обрезанный лог, чем исключение поверх результата
     raise TimeoutError(f"лог {job_id} не появился за {timeout} с (задержка Drive?)")
 
 

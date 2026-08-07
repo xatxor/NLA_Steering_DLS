@@ -16,6 +16,8 @@ dependencies = [
     "tqdm>=4.66",
     "safetensors>=0.4",
     "huggingface-hub>=0.26",
+    # без torch: токенизаторы и конфиги инспектируются локально, не занимая GPU
+    "transformers>=4.46",
 ]
 
 [dependency-groups]
