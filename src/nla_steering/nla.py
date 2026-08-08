@@ -84,6 +84,34 @@ class Verbalizer:
         self.model = None
         return False
 
+    def latents(self, vectors: np.ndarray, batch_size: int = 16,
+                layer: int = -1) -> np.ndarray:
+        """Латент av без генерации текста: один forward на активацию.
+
+        Читается скрытое состояние на последней позиции промпта — то, с чем `av`
+        подходит к порождению объяснения, его внутренняя сводка активации.
+
+        Ради этого метода вся затея и имеет смысл для inference: текстовая
+        вербализация стоит целой генерации на каждый токен (~60 forward'ов),
+        здесь же ровно один. Промпт у всех одинаковый, меняется только
+        подставляемый вектор, поэтому батчинг тривиален.
+        """
+        import torch
+
+        vectors = np.atleast_2d(vectors)
+        out = []
+        for start in range(0, len(vectors), batch_size):
+            chunk = vectors[start:start + batch_size]
+            self._holder["v"] = torch.as_tensor(chunk, dtype=torch.float32,
+                                                device=self.model.device)
+            ids = self.input_ids.expand(len(chunk), -1)
+            mask = self.mask.expand(len(chunk), -1) if self.mask is not None else None
+            with torch.no_grad():
+                res = self.model(input_ids=ids, attention_mask=mask,
+                                 output_hidden_states=True)
+            out.append(res.hidden_states[layer][:, -1].float().cpu().numpy())
+        return np.concatenate(out)
+
     def verbalize(self, vectors: np.ndarray, max_new_tokens: int = 60) -> list[str]:
         import torch
 
