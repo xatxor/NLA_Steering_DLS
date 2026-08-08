@@ -18,6 +18,8 @@ dependencies = [
     "huggingface-hub>=0.26",
     # без torch: токенизаторы и конфиги инспектируются локально, не занимая GPU
     "transformers>=4.46",
+    "pyarrow>=17",  # датасеты на HF лежат в parquet
+    "jinja2>=3.1.6",
 ]
 
 [dependency-groups]

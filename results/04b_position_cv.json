@@ -1,0 +1,39 @@
+{
+  "artifact": "20260806-194021.npz",
+  "folds": 5,
+  "best_position": -3,
+  "by_position": {
+    "-1": {
+      "token": "\\n",
+      "norm": 22.39972496032715,
+      "auroc_cv_mean": 0.9499540299248469,
+      "auroc_cv_std": 0.036471080814115014,
+      "direction_stability": 0.9941217303276062,
+      "auroc_xstest": 0.952
+    },
+    "-2": {
+      "token": "assistant",
+      "norm": 16.343568801879883,
+      "auroc_cv_mean": 0.9541347473931671,
+      "auroc_cv_std": 0.03077791431235568,
+      "direction_stability": 0.9940422177314758,
+      "auroc_xstest": 0.94392
+    },
+    "-3": {
+      "token": "<|im_start|>",
+      "norm": 4.436830043792725,
+      "auroc_cv_mean": 0.9588818382467057,
+      "auroc_cv_std": 0.023026136414116577,
+      "direction_stability": 0.9852530360221863,
+      "auroc_xstest": 0.91492
+    },
+    "-5": {
+      "token": "<|im_end|>",
+      "norm": 14.922969818115234,
+      "auroc_cv_mean": 0.9331250213420088,
+      "auroc_cv_std": 0.02897959853863638,
+      "direction_stability": 0.9929426908493042,
+      "auroc_xstest": 0.88312
+    }
+  }
+}
