@@ -26,3 +26,17 @@ def is_refusal(text: str) -> bool:
 
 def refusal_rate(texts: list[str]) -> float:
     return sum(is_refusal(t) for t in texts) / len(texts) if texts else 0.0
+
+
+def refusal_onset(tok, token_ids: list[int]) -> int | None:
+    """Индекс токена, на котором ответ впервые становится отказом.
+
+    Нужен, чтобы отличить задачу, где отказ решается в первом токене, от задачи,
+    где решение возникает по ходу генерации: в первой позиционная эвристика
+    закрывает вопрос, во второй — нет. Именно это различие и делает постановку
+    пригодной для проверки гипотезы о гейтинге по содержанию.
+    """
+    for i in range(1, len(token_ids) + 1):
+        if is_refusal(tok.decode(token_ids[:i], skip_special_tokens=True)):
+            return i - 1
+    return None
