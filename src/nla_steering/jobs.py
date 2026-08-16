@@ -107,6 +107,26 @@ def read_log(job_id: str, timeout: float = 120.0, poll: float = 3.0,
     raise TimeoutError(f"лог {job_id} не появился за {timeout} с (задержка Drive?)")
 
 
+def requeue_stale(older_than: float = 900.0) -> list[str]:
+    """Вернуть в очередь задачи, зависшие в running/.
+
+    Colab рвётся при потере связи и по 12-часовому лимиту, и тогда задача
+    остаётся в running/ навсегда: воркер, который её забрал, уже мёртв, а новый
+    её не тронет. Здесь такие задачи возвращаются в очередь.
+
+    `older_than` защищает от гонки с живым воркером: задача, взятая только что,
+    не трогается. Порог должен быть заметно больше типичного шага генерации.
+    """
+    ensure_layout()
+    cutoff = time.time() - older_than
+    moved = []
+    for path in sorted(jobs_dir("running").glob("*.json")):
+        if path.stat().st_mtime < cutoff:
+            path.replace(jobs_dir("queue") / path.name)
+            moved.append(path.stem)
+    return moved
+
+
 def status() -> dict[str, list[str]]:
     """Снимок очереди — чтобы проверить, что происходит."""
     ensure_layout()

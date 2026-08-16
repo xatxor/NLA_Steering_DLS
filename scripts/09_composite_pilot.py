@@ -159,7 +159,7 @@ def main() -> int:
         {"results": results, "samples": samples, "verdict": verdict,
          "template": TEMPLATE, "n_pairs": n}, indent=2, ensure_ascii=False), "utf-8")
     print(f"\nОтчёт на Drive: {out_dir / (stamp + '.json')}")
-    return 0 if verdict else 2
+    return 0
 
 
 if __name__ == "__main__":

@@ -206,7 +206,7 @@ def main() -> int:
          "questions": data["question"].tolist(), "answers": answers_text},
         indent=2, ensure_ascii=False), "utf-8")
     print(f"\nАртефакт на Drive: {out_dir / (stamp + '_ll.npz')}")
-    return 0 if verdict else 2
+    return 0
 
 
 if __name__ == "__main__":

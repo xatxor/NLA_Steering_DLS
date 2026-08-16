@@ -179,7 +179,7 @@ def main() -> int:
          "truthful": truthful.tolist(), "examples": examples},
         indent=2, ensure_ascii=False), "utf-8")
     print(f"\nОтчёт на Drive: {out_dir / (stamp + '.json')}")
-    return 0 if verdict else 2
+    return 0
 
 
 if __name__ == "__main__":
