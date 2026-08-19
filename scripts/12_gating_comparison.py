@@ -164,38 +164,75 @@ def main() -> int:
     print("гружу токенизатор", flush=True)
     beat("compare", "гружу токенизатор")
     tok = AutoTokenizer.from_pretrained(cfg["base_model"], token=token)
-    print("токенизатор готов, гружу веса (может качаться ~6 ГБ)", flush=True)
-    model = load_model(cfg["base_model"], token)
-    model.eval()
-    print("веса загружены", flush=True)
-    beat("compare", "веса загружены")
 
-    # --- фаза 1: нестирённая генерация + активации для гейтов ---
-    print("\n=== фаза 1: базовая генерация и активации ===")
-    baseline_text, baseline_nat, token_acts, lengths = [], [], [], []
-    for i, row in data.iterrows():
-        enc = tok.apply_chat_template([{"role": "user", "content": row["prompt"]}],
-                                      add_generation_prompt=True,
-                                      return_tensors="pt", return_dict=True)
-        ids = {k: v_.to(model.device) for k, v_ in enc.items()}
-        with torch.no_grad():
-            out = model.generate(**ids, max_new_tokens=args.max_new_tokens,
-                                 do_sample=False, pad_token_id=tok.eos_token_id,
-                                 output_hidden_states=True, return_dict_in_generate=True)
-        prompt_len = ids["input_ids"].shape[1]
-        gen = out.sequences[0, prompt_len:]
-        baseline_text.append(tok.decode(gen, skip_special_tokens=True))
-        baseline_nat.append(naturalness(model, out.sequences[0], prompt_len))
-        acts = []
-        for step, states in enumerate(out.hidden_states):
-            if step >= gen.numel():
-                break
-            acts.append(states[index][0, -1].float().cpu().numpy())
-        token_acts.append(np.stack(acts) if acts else np.zeros((0, v.shape[0]), np.float32))
-        lengths.append(len(acts))
-        if (i + 1) % 25 == 0:
-            print(f"  {i + 1}/{len(data)}", flush=True)
-            beat("compare", f"фаза 1: {i + 1}/{len(data)}")
+    # Кэш по фазам обязателен: фазы 1 и 2 идут больше часа, и обрыв сессии Colab
+    # (исчерпанный лимит GPU, потеря связи) один раз уже стоил всей этой работы.
+    # Ключ включает параметры, влияющие на результат, чтобы не подхватить чужой.
+    cache_key = f"{args.n_per_class}_{args.max_new_tokens}_{args.seed}"
+    cache_dir = artifacts_dir("comparison") / "cache"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    phase1_path = cache_dir / f"phase1_{cache_key}.npz"
+    phase2_path = cache_dir / f"phase2_{cache_key}.npz"
+
+    def unflatten(flat_arr, sizes):
+        out, cursor = [], 0
+        for n in sizes:
+            out.append(flat_arr[cursor:cursor + n])
+            cursor += n
+        return out
+
+    def run_phase1():
+        print("гружу веса (может качаться ~6 ГБ)", flush=True)
+        model = load_model(cfg["base_model"], token)
+        model.eval()
+        print("веса загружены", flush=True)
+        beat("compare", "веса загружены")
+        print("\n=== фаза 1: базовая генерация и активации ===", flush=True)
+
+        texts, nats, acts_per_prompt, sizes = [], [], [], []
+        for i, row in data.iterrows():
+            enc = tok.apply_chat_template([{"role": "user", "content": row["prompt"]}],
+                                          add_generation_prompt=True,
+                                          return_tensors="pt", return_dict=True)
+            ids = {k: v_.to(model.device) for k, v_ in enc.items()}
+            with torch.no_grad():
+                out = model.generate(**ids, max_new_tokens=args.max_new_tokens,
+                                     do_sample=False, pad_token_id=tok.eos_token_id,
+                                     output_hidden_states=True,
+                                     return_dict_in_generate=True)
+            prompt_len = ids["input_ids"].shape[1]
+            gen = out.sequences[0, prompt_len:]
+            texts.append(tok.decode(gen, skip_special_tokens=True))
+            nats.append(naturalness(model, out.sequences[0], prompt_len))
+            acts = []
+            for step, states in enumerate(out.hidden_states):
+                if step >= gen.numel():
+                    break
+                acts.append(states[index][0, -1].float().cpu().numpy())
+            acts_per_prompt.append(np.stack(acts) if acts
+                                   else np.zeros((0, v.shape[0]), np.float32))
+            sizes.append(len(acts))
+            if (i + 1) % 25 == 0:
+                print(f"  {i + 1}/{len(data)}", flush=True)
+                beat("compare", f"фаза 1: {i + 1}/{len(data)}")
+        free(model)
+        return texts, nats, acts_per_prompt, sizes
+
+    if phase1_path.exists():
+        print(f"\n=== фаза 1: из кэша {phase1_path.name} ===", flush=True)
+        cached = np.load(phase1_path, allow_pickle=True)
+        lengths = cached["lengths"].tolist()
+        token_acts = unflatten(cached["flat_acts"], lengths)
+        baseline_text = list(cached["baseline_text"])
+        baseline_nat = list(cached["baseline_nat"])
+    else:
+        baseline_text, baseline_nat, token_acts, lengths = run_phase1()
+        np.savez_compressed(
+            phase1_path, lengths=np.array(lengths),
+            flat_acts=np.concatenate([a for a in token_acts if len(a)]),
+            baseline_text=np.array(baseline_text, dtype=object),
+            baseline_nat=np.array(baseline_nat))
+        print(f"фаза 1 сохранена в {phase1_path.name}", flush=True)
 
     from sklearn.linear_model import LogisticRegression
 
@@ -204,21 +241,23 @@ def main() -> int:
         "cosine": [a @ unit if len(a) else np.zeros(0) for a in token_acts],
         "probe": [probe.decision_function(a) if len(a) else np.zeros(0) for a in token_acts],
     }
-    free(model)
 
     # --- фаза 2: латенты av для гейта nla_latent ---
-    print("\n=== фаза 2: латенты av ===")
-    top = np.argsort(prompt_acts @ unit)[-args.reference_k:]
-    flat = np.concatenate([a for a in token_acts if len(a)])
-    with Verbalizer(cfg, token) as av:
-        reference = av.latents(prompt_acts[top]).mean(0)
-        flat_latents = av.latents(flat)
-    flat_scores = cosine(flat_latents, np.broadcast_to(reference, flat_latents.shape))
-    nla_scores, cursor = [], 0
-    for n in lengths:
-        nla_scores.append(flat_scores[cursor:cursor + n])
-        cursor += n
-    scores["nla_latent"] = nla_scores
+    if phase2_path.exists():
+        print(f"\n=== фаза 2: из кэша {phase2_path.name} ===", flush=True)
+        flat_scores = np.load(phase2_path)["flat_scores"]
+    else:
+        print("\n=== фаза 2: латенты av ===", flush=True)
+        beat("compare", "фаза 2: латенты av")
+        top = np.argsort(prompt_acts @ unit)[-args.reference_k:]
+        flat = np.concatenate([a for a in token_acts if len(a)])
+        with Verbalizer(cfg, token) as av:
+            reference = av.latents(prompt_acts[top]).mean(0)
+            flat_latents = av.latents(flat)
+        flat_scores = cosine(flat_latents, np.broadcast_to(reference, flat_latents.shape))
+        np.savez_compressed(phase2_path, flat_scores=flat_scores)
+        print(f"фаза 2 сохранена в {phase2_path.name}", flush=True)
+    scores["nla_latent"] = unflatten(flat_scores, lengths)
 
     # --- фаза 3: стиринг во всех режимах при равном бюджете ---
     print("\n=== фаза 3: генерация со стирингом ===")
@@ -242,22 +281,34 @@ def main() -> int:
     results = {"none": {"text": baseline_text, "nat": baseline_nat}}
     with Steerer(model, layer, vector_t) as steerer:
         for mode in MODES:
-            texts, nats = [], []
+            # Кэш на уровне режима: связь рвётся, и обрыв не должен стоить всей
+            # фазы. Один режим — примерно шесть минут, это приемлемая потеря.
+            mode_path = cache_dir / f"phase3_{mode}_{cache_key}_{args.budget}_{args.alpha}.npz"
+            if mode_path.exists():
+                cached = np.load(mode_path, allow_pickle=True)
+                results[mode] = {"text": list(cached["text"]),
+                                 "nat": list(cached["nat"])}
+                print(f"  {mode} из кэша", flush=True)
+                continue
+
+            texts, pairs = [], []
             for i, row in data.iterrows():
                 text, seq, plen = generate(model, tok, row["prompt"],
                                            args.max_new_tokens, steerer,
                                            targets_for(mode, i))
                 texts.append(text)
-                nats.append((seq, plen))
-            results[mode] = {"text": texts, "seq": nats}
-            print(f"  {mode} готов")
-            beat("compare", f"фаза 3: {mode} готов")
+                pairs.append((seq, plen))
 
-    # Беглость считается уже после выхода из Steerer: хук снят, значит logP
-    # ответа берётся под нестирённой моделью — иначе стиринг оценивал бы сам себя.
-    for mode in MODES:
-        pairs = results[mode].pop("seq")
-        results[mode]["nat"] = [naturalness(model, s, p) for s, p in pairs]
+            # Беглость меряем с выключенным хуком (пустое множество целей),
+            # иначе стиринг оценивал бы сам себя.
+            steerer.reset(set())
+            nats = [naturalness(model, s, p) for s, p in pairs]
+
+            results[mode] = {"text": texts, "nat": nats}
+            np.savez_compressed(mode_path, text=np.array(texts, dtype=object),
+                                nat=np.array(nats))
+            print(f"  {mode} готов", flush=True)
+            beat("compare", f"фаза 3: {mode} готов")
     free(model)
 
     # --- сводка ---
