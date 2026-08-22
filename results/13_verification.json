@@ -1,0 +1,57 @@
+{
+  "pick_positions": {
+    "cosine": {
+      "mean": 7.765,
+      "frac_first3": 0.395,
+      "frac_pos0": 0.21166666666666667
+    },
+    "probe": {
+      "mean": 13.64,
+      "frac_first3": 0.155,
+      "frac_pos0": 0.06666666666666667
+    },
+    "nla_latent": {
+      "mean": 5.065,
+      "frac_first3": 0.615,
+      "frac_pos0": 0.5
+    },
+    "random": {
+      "mean": 16.05666666666667,
+      "frac_first3": 0.08666666666666667,
+      "frac_pos0": 0.02666666666666667
+    },
+    "first_k": {
+      "mean": 0.5,
+      "frac_first3": 1.0,
+      "frac_pos0": 0.5
+    }
+  },
+  "table_mismatches": 0,
+  "marker_sensitivity": {
+    "none@0.5": {
+      "narrow": 0.14,
+      "base": 0.14,
+      "wide": 0.14
+    },
+    "cosine@0.5": {
+      "narrow": 0.11333333333333333,
+      "base": 0.11333333333333333,
+      "wide": 0.11333333333333333
+    },
+    "nla_latent@0.5": {
+      "narrow": 0.07333333333333333,
+      "base": 0.07333333333333333,
+      "wide": 0.07333333333333333
+    },
+    "first_k@0.5": {
+      "narrow": 0.04666666666666667,
+      "base": 0.04666666666666667,
+      "wide": 0.04666666666666667
+    },
+    "random@0.5": {
+      "narrow": 0.14,
+      "base": 0.14,
+      "wide": 0.14
+    }
+  }
+}
