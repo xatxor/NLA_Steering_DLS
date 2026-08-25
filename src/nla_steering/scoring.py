@@ -14,6 +14,18 @@ from __future__ import annotations
 import numpy as np
 
 
+def auroc(scores: np.ndarray, labels: np.ndarray) -> float:
+    """AUROC через ранги. Без sklearn, чтобы не тянуть зависимость в задачу."""
+    scores, labels = np.asarray(scores), np.asarray(labels)
+    order = np.argsort(scores)
+    ranks = np.empty(len(scores), dtype=float)
+    ranks[order] = np.arange(1, len(scores) + 1)
+    n_pos, n_neg = int(labels.sum()), int((1 - labels).sum())
+    if n_pos == 0 or n_neg == 0:
+        return float("nan")
+    return float((ranks[labels == 1].sum() - n_pos * (n_pos + 1) / 2) / (n_pos * n_neg))
+
+
 def mean_logprobs(model, tok, context: list[int], candidates: list[list[int]]) -> np.ndarray:
     """Средний логарифм вероятности каждого варианта как продолжения контекста."""
     import torch
