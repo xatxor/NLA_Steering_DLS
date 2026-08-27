@@ -71,6 +71,10 @@ def main() -> int:
     parser.add_argument("--config", default="configs/base.yaml")
     parser.add_argument("--n-questions", type=int, default=300)
     parser.add_argument("--max-answers", type=int, default=3)
+    parser.add_argument("--vector-dir", default="truth_vector",
+                        help="подпапка artifacts с .npz вектора")
+    parser.add_argument("--vector-key", default=None,
+                        help="ключ массива внутри npz; по умолчанию из best_format")
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
 
@@ -83,11 +87,14 @@ def main() -> int:
     layer = cfg["layer"]
 
     beat("truth_inform", "старт")
-    vec_npz = np.load(sorted(artifacts_dir("truth_vector").glob("*.npz"))[-1],
+    vec_npz = np.load(sorted(artifacts_dir(args.vector_dir).glob("*.npz"))[-1],
                       allow_pickle=True)
-    fmt = str(vec_npz["best_format"])
-    typical = float(np.linalg.norm(vec_npz["tqa_acts"], axis=1).mean())
-    v = vec_npz[f"vector_{fmt}"] * typical
+    fmt = args.vector_key or f"vector_{str(vec_npz['best_format'])}"
+    # Норма активаций берётся из того же артефакта: у разных источников она
+    # своя, и без приведения α измерялась бы в несопоставимых единицах.
+    ref = "tqa_acts" if "tqa_acts" in vec_npz else "acts24"
+    typical = float(np.linalg.norm(vec_npz[ref], axis=1).mean())
+    v = vec_npz[fmt] * typical
 
     data = pd.read_parquet(hf_hub_download(TQA, TQA_FILE, repo_type="dataset",
                                            token=token))

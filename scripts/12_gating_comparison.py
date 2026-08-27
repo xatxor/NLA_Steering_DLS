@@ -59,7 +59,8 @@ from nla_steering.steering import Steerer  # noqa: E402
 
 XSTEST = "natolambert/xstest-v2-copy"
 XSTEST_FILE = "data/prompts-00000-of-00001.parquet"
-MODES = ["all", "random", "first_k", "cosine", "probe", "nla_latent"]
+ALL_MODES = ["all", "random", "first_k", "cosine", "probe", "nla_latent",
+             "cosine_pos_matched", "nla_latent_pos_matched"]
 
 
 def load_xstest(token: str | None, n_per_class: int, seed: int) -> pd.DataFrame:
@@ -119,6 +120,8 @@ def main() -> int:
     parser.add_argument("--budget", type=int, default=2, help="k токенов на ответ")
     parser.add_argument("--alphas", default="2.0",
                         help="через запятую, напр. 0.5,1.0,2.0")
+    parser.add_argument("--modes", default=",".join(ALL_MODES),
+                        help="какие режимы считать, через запятую")
     parser.add_argument("--reference-k", type=int, default=32)
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
@@ -153,6 +156,10 @@ def main() -> int:
           f"(безопасных {int((data.unsafe == 0).sum())}, "
           f"опасных {int((data.unsafe == 1).sum())}) ===")
     alphas = [float(a) for a in args.alphas.split(",")]
+    modes = [m.strip() for m in args.modes.split(",") if m.strip()]
+    unknown = set(modes) - set(ALL_MODES)
+    if unknown:
+        raise SystemExit(f"неизвестные режимы: {sorted(unknown)}")
     print(f"=== бюджет {args.budget} токенов на ответ, α: {alphas} ===")
 
     # Индикаторы скачивания весов рисуются возвратом каретки без перевода
@@ -271,6 +278,40 @@ def main() -> int:
     model = load_model(cfg["base_model"], token)
     model.eval()
 
+    # Позиции, выбираемые содержательными гейтами, считаем один раз: они нужны
+    # и сами по себе, и как основа для позиционно-подобранных контролей.
+    chosen = {}
+    for name in ("cosine", "probe", "nla_latent"):
+        chosen[name] = [set(np.argsort(scores[name][i])[-min(args.budget, n):].tolist())
+                        if n else set() for i, n in enumerate(lengths)]
+
+    # Контроль на позиционный конфаунд. Проверка 13 показала, что порядок гейтов
+    # по силе эффекта совпадает с их порядком по доле выборов в позициях 0–2, а
+    # этап 6 установил, что полезны только они. Значит преимущество гейта может
+    # объясняться позиционным приором, а не пониманием концепта.
+    #
+    # Контроль строится перестановкой: промпту i отдаётся набор позиций,
+    # выбранный тем же гейтом для другого промпта j. Маргинальное распределение
+    # позиций сохраняется в точности, связь с содержанием разрывается. Это
+    # сильнее, чем выборка из маргинала, потому что сохраняет и структуру
+    # набора (например, «нулевой токен плюс один поздний»).
+    match_rng = np.random.default_rng(args.seed + 1)
+    for name in ("cosine", "nla_latent"):
+        permutation = match_rng.permutation(len(lengths))
+        matched = []
+        for i, n in enumerate(lengths):
+            k = min(args.budget, n)
+            if n == 0:
+                matched.append(set())
+                continue
+            donor = [p for p in chosen[name][permutation[i]] if p < n]
+            pool = [p for p in range(n) if p not in donor]
+            while len(donor) < k and pool:
+                donor.append(int(match_rng.choice(pool)))
+                pool.remove(donor[-1])
+            matched.append(set(donor[:k]))
+        chosen[f"{name}_pos_matched"] = matched
+
     def targets_for(mode: str, i: int) -> set[int] | None:
         n = lengths[i]
         k = min(args.budget, n)
@@ -282,14 +323,14 @@ def main() -> int:
             return set(range(k))
         if mode == "random":
             return set(rng.choice(n, size=k, replace=False).tolist())
-        return set(np.argsort(scores[mode][i])[-k:].tolist())
+        return chosen[mode][i]
 
     results = {("none", 0.0): {"text": baseline_text, "nat": baseline_nat}}
     with Steerer(model, layer, None) as steerer:
         for alpha in alphas:
             steerer.vector = torch.as_tensor(-alpha * v, dtype=torch.float32,
                                              device=model.device)
-            for mode in MODES:
+            for mode in modes:
                 # Кэш на уровне (режим, α): связь рвётся, и обрыв не должен
                 # стоить всей фазы. Одна ячейка — около девяти минут.
                 mode_path = (cache_dir /
