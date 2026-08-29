@@ -224,9 +224,18 @@ def main() -> int:
     stamp = f"{datetime.now(timezone.utc):%Y%m%d-%H%M%S}"
     out_dir = artifacts_dir("truth_inform")
     out_dir.mkdir(parents=True, exist_ok=True)
-    payload = {"n_used": used, "alphas": ALPHAS,
+    payload = {"n_used": used, "alphas": ALPHAS, "vector": f"{args.vector_dir}/{fmt}",
                "report": {str(k): v for k, v in report.items()},
                "degenerate": bool(degenerate)}
+    # Поединичные значения нужны для ПАРНОГО теста: разница между α измеряется
+    # на одних и тех же вопросах, и парный тест на порядок мощнее непарного.
+    # Дважды подряд я сохраняла только средние и не могла проверить значимость.
+    np.savez_compressed(
+        out_dir / f"{stamp}_per_question.npz",
+        alphas=np.array(ALPHAS),
+        mc2_all=np.array([rows[a]["mc2_all"] for a in ALPHAS]),
+        mc2_committal=np.array([rows[a]["mc2_committal"] for a in ALPHAS]),
+        noncom_share=np.array([rows[a]["noncom_share"] for a in ALPHAS]))
     (out_dir / f"{stamp}.json").write_text(json.dumps(payload, indent=2,
                                                       ensure_ascii=False), "utf-8")
     results_dir().mkdir(parents=True, exist_ok=True)
