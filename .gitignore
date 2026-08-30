@@ -20,3 +20,11 @@ artifacts/
 # кэши моделей
 .cache/
 hf_cache/
+
+# промежуточные файлы LaTeX
+report/*.aux
+report/*.log
+report/*.out
+report/*.fls
+report/*.fdb_latexmk
+report/build.log
